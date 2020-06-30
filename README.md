@@ -1,2 +1,2 @@
 # My-Research
-Contains my academic research project I have been conducting with my university's mathematics department. The project involved predictive and regression modeling on rheumatoid arthritis (RA) incidence amongst their associated factors explaining in patient’s income-poverty ratio using R.
+Contains my academic research project I have been conducting with my university's mathematics department. The project involved predictive and regression modeling on rheumatoid arthritis (RA) incidence amongst their associated factors explaining in patient’s income-poverty ratio using R. The files above only contain a snipped verison of the overall project. Many additional testing were performed including various types of data visualizations involving ggplots. 

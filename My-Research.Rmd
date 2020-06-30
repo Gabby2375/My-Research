@@ -1,0 +1,278 @@
+---
+title: "My Research"
+author: "Gabrielle Taylor"
+date: "6/30/2020"
+output: html_document
+---
+
+0.0 Calling packages:
+```{r}
+library(ggplot2)
+library(dplyr)
+library(SASxport)
+library(foreign)
+library(tidyr)
+library(psych)
+library(car)
+library(effects)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+```
+1.0 Data collection from NHANES (Steps A1-A4 were repeated for each cohourt)
+
+A.1. Import & Read files:
+```{r}
+ALB_CR_G = read.xport('ALB_CR_G.XPT')
+BMX_G = read.xport('BMX_G.XPT')
+BPX_G = read.xport('BPX_G.XPT')
+DEMO_G = read.xport('DEMO_G.XPT')
+GHB_G = read.xport('GHB_G.XPT')
+HDL_G = read.xport('HDL_G.XPT')
+HUQ_G = read.xport('HUQ_G.XPT')
+RA_G = read.xport('MCQ_G.XPT')
+PAQ_G = read.xport('PAQ_G.XPT')
+SLQ_G = read.xport('SLQ_G.XPT')
+SMQ_G = read.xport('SMQ_G.XPT')
+TCHOL_G = read.xport('TCHOL_G.XPT')
+```
+A.2. Selected Interest Variables:
+```{r}
+ALB_CR_G <- ALB_CR_G %>% select(SEQN, URXUMA)
+BMX_G <- BMX_G %>% select(SEQN, BMXBMI)
+BPX_G <- BPX_G %>% select(SEQN, BPXSY1, BPXSY2, BPXSY3, BPXSY4, BPXDI1, BPXDI2, BPXDI3, BPXDI4)
+DEMO_G <- DEMO_G %>% select(SEQN,RIDAGEYR,RIAGENDR, DMDEDUC2, INDFMPIR, DMDMARTL, RIDRETH3, WTINT2YR, WTMEC2YR, SDMVPSU, SDMVSTRA)
+GHB_G <- GHB_G %>% select(SEQN, LBXGH)
+HDL_G <- HDL_G %>% select (SEQN, LBDHDD)
+HUQ_G <- HUQ_G %>% select(SEQN, HUQ010, HUQ020, HUQ040, HUQ090) %>% rename(HUQ041 = HUQ040)
+RA_G <- RA_G %>% select(SEQN, MCQ160A, MCQ195)
+PAQ_G <- PAQ_G %>% select(SEQN,PAQ605, PAQ620, PAQ650, PAQ665)
+SLQ_G <- SLQ_G %>% select(SEQN, SLD010H)
+SMQ_G <- SMQ_G %>% select(SEQN,SMQ020)
+TCHOL_G <- TCHOL_G %>% select(SEQN, LBXTC)
+```
+A.3. Combine & obtain participants whom answered all questionnaires:
+```{r}
+data_set_G <- inner_join(
+  ALB_CR_G , inner_join(
+    BMX_G, inner_join(
+      BPX_G, inner_join(
+        DEMO_G, inner_join(
+          GHB_G, inner_join(
+            HDL_G, inner_join(
+              HUQ_G, inner_join(
+                RA_G, inner_join(
+                  PAQ_G, inner_join(
+                    SLQ_G, inner_join(
+                      SMQ_G, TCHOL_G, by = 'SEQN'),
+                  by = 'SEQN'),
+                by = 'SEQN'),
+              by = 'SEQN'),
+            by = 'SEQN'),
+          by = 'SEQN'),
+        by = 'SEQN'),
+      by = 'SEQN'),
+    by = 'SEQN'),
+  by = 'SEQN'),
+by = 'SEQN')
+```
+A.4. Transform & Exports the dataset into a csv file document
+```{r}
+write.csv(data_set_G, file = ("NHANES_2011-2012.csv"))
+```
+2.0 Combined data-frames of each cohourt for NHANES
+
+```{r}
+dataf <- rbind(data_set_I, data_set_H, data_set_G)
+write.csv(dataf, file = ("NHANES_2011-2016.csv"))  #18,248 individuals
+```
+3.0 Data Cleaning - Removal of missing and non-responsive data
+
+```{r}
+adj_dataf <- dataf %>% 
+# Variable Renaming:  
+  rename(
+    Albumin_u = URXUMA, 
+    BMI = BMXBMI,
+    Gender = RIAGENDR,
+    Age = RIDAGEYR,
+    Ethnic =  RIDRETH3,
+    Edu = DMDEDUC2,
+    MaritalStatus = DMDMARTL,
+    IncomeRatio = INDFMPIR,
+    Glychemoglobin = LBXGH,
+    HDL = LBDHDD, 
+    HealthCondition = HUQ010,
+    HealthCompared = HUQ020,    
+    AccessPlace = HUQ041,
+    SeenMentalDoc = HUQ090,
+    DiagArthritis = MCQ160A,
+    RA = MCQ195,
+    ModerateWork = PAQ620, 
+    ModerateRecreational = PAQ665, 
+    VigorousWork = PAQ605, 
+    VigorousRecreational = PAQ650, 
+    SleepHours = SLD010H,
+    SmokingCig = SMQ020,
+    TotalCholesterol = LBXTC)
+
+# Removal of individuals from the dataset who respond with 'NA':
+adj_dataf <- adj_dataf %>% 
+  filter(is.na(Albumin_u)==FALSE) %>%
+  filter(is.na(BMI)==FALSE) %>%
+  filter(is.na(Gender)==FALSE) %>%
+  filter(is.na(Ethnic)==FALSE) %>%
+  filter(is.na(Edu)==FALSE) %>%
+  filter(is.na(MaritalStatus)==FALSE) %>%
+  filter(is.na(IncomeRatio)==FALSE) %>%
+  filter(is.na(Glychemoglobin)==FALSE) %>%
+  filter(is.na(HDL)==FALSE) %>%
+  filter(is.na(DiagArthritis)==FALSE) %>%
+  filter(is.na(SleepHours)==FALSE) %>%
+  filter(is.na(SmokingCig)==FALSE)%>%
+  filter(is.na(TotalCholesterol)==FALSE) %>%    
+  filter(is.na(HealthCondition)==FALSE) %>%
+  filter(is.na(HealthCompared)==FALSE) %>%
+  filter(is.na(AccessPlace)== FALSE) %>%      
+  filter(is.na(SeenMentalDoc)==FALSE) %>% 
+  filter(is.na(VigorousWork)==FALSE) %>%
+  filter(is.na(ModerateWork)==FALSE) %>%
+  filter(is.na(VigorousRecreational)==FALSE) %>%
+  filter(is.na(ModerateRecreational)==FALSE) %>%
+  filter(Age >=20 & Age <=79) %>%
+  filter(BMI >=18) %>% 
+  filter(is.na(RA)==TRUE |RA == 2) 
+  
+adj_dataf <- adj_dataf %>%
+  # Removal of 'NA' responses, while taking the mean of all the Blood Pressure Measurements
+  mutate(
+    Systolic = rowMeans(adj_dataf[,c(13:16)], na.rm=TRUE),
+    Diastolic = rowMeans(adj_dataf[,c(17:20)],na.rm=TRUE)
+    )
+
+adj_dataf <- adj_dataf %>% 
+  filter (is.na(Systolic)==FALSE) %>% 
+  filter(is.na(Diastolic)==FALSE)%>%
+  # Create Bio-marker - Cholesterol Ratio = TotalCholesterol/ HDL
+  mutate(CholesterolRatio = TotalCholesterol/HDL) 
+
+# Replaces NA responses as Non-RA patients under the Medical COndition Questionnaire
+adj_dataf$RA[is.na(adj_dataf$RA)] <- as.numeric('0')
+
+```
+4.0 Allostatic Load Calculation -> to measure perceived stress
+
+```{r}
+# Maximum possible allostatic load score was 8 points: 1pt = high-risk, 1/2pt = moderate-risk, 0pt = low-risk
+
+# Converts the bin ranges into numerical values of 0, 0.5, and 1
+adj_dataf$BMI_al = as.numeric ( ifelse(adj_dataf$BMI <25, "0", ifelse(adj_dataf$BMI <30, "0.5","1")))
+adj_dataf$Systolic_al = as.numeric (ifelse(adj_dataf$Systolic <120, "0", ifelse(adj_dataf$Systolic <150, "0.5","1")))
+adj_dataf$Diastolic_al = as.numeric (ifelse(adj_dataf$Diastolic <80, "0", ifelse(adj_dataf$Diastolic <90, "0.5","1")))
+adj_dataf$Albumin_u_al = as.numeric (ifelse(adj_dataf$Albumin_u <3.0, "0", ifelse(adj_dataf$Albumin_u <3.8, "0.5","1")))
+adj_dataf$Glychemoglobin_al = as.numeric (ifelse(adj_dataf$Glychemoglobin <5.7, "0", ifelse(adj_dataf$Glychemoglobin <6.5, "0.5","1")))
+adj_dataf$HDL_al = as.numeric (ifelse(adj_dataf$HDL <40, "0", ifelse(adj_dataf$HDL <60, "0.5","1")))
+adj_dataf$TotalCholesterol_al = as.numeric (ifelse(adj_dataf$TotalCholesterol <200, "0", ifelse(adj_dataf$TotalCholesterol <240, "0.5","1")))
+adj_dataf$CholesterolRatio_al = as.numeric (ifelse(adj_dataf$CholesterolRatio <5, "0", ifelse(adj_dataf$CholesterolRatio <6, "0.5","1")))
+
+# Calculates for "stress"
+adj_dataf <- adj_dataf %>%
+  mutate(Stress = Systolic_al + Diastolic_al + Albumin_u_al + HDL_al + TotalCholesterol_al + Glychemoglobin_al + CholesterolRatio_al + BMI_al) %>%
+  
+  # Selecting all the desirable variables   
+  select(SEQN, DiagArthritis, RA, Age, Gender, Edu, Ethnic, MaritalStatus, IncomeRatio, SleepHours, SmokingCig, Systolic, Diastolic, BMI, Albumin_u, Glychemoglobin, TotalCholesterol, HDL, CholesterolRatio, Stress, HealthCondition, HealthCompared, AccessPlace, SeenMentalDoc, VigorousWork, ModerateWork, VigorousRecreational, ModerateRecreational, WTINT2YR, WTMEC2YR, SDMVPSU, SDMVSTRA) 
+```
+5.0 Quantitative Data-Frame Selection:
+
+```{r}
+num_dataf <- adj_dataf
+write.csv(num_dataf, file = ("NHANES_2011-2016_num.csv"))  # 8,332 individuals
+```
+
+6.0 Convert caterogical variables into qualititative data from quantitative data-frame
+```{r}
+# Adjust Variable Factor(s) - categorization
+ adj_dataf <- adj_dataf %>%
+   mutate(
+     Gender = factor(ifelse (Gender == 1, 'Male', 'Female')),
+     MaritalStatus = factor(MaritalStatus, levels = c(1,2,3,4,5,6),labels = c('Married', 'Widowed', 'Divorced', 'Separated', 'Never married', 'Living w/ partner')),
+     Edu = factor(Edu, levels = c(1,2,3,4,5), labels = c('< 9th', '9-11th', 'H.S. graduate', 'Some college', 'College graduate')),
+     RA = factor(RA, levels = c(0,2), labels = c('No Arthritis', 'RA')),
+     Ethnic = factor(Ethnic, levels = c(1,2,3,4,6,7), labels = c('Mex. american', 'Other hispanic', 'NH white', 'NH black', 'NH asian', 'Other race')), 
+     HealthCompared = factor(HealthCompared, levels = c(1,2,3), labels = c('Better', 'Worse', 'Same')),
+     HealthCondition = factor(HealthCondition, levels = c(1,2,3,4,5), labels = c('Excellent', 'Very good', 'Good', 'Fair', 'Poor')),
+     SeenMentalDoc = factor(SeenMentalDoc, levels = c(1,2), labels = c('Yes', 'No')),
+     VigorousWork = factor(VigorousWork, levels = c(1,2), labels = c('Yes', 'No')),
+     ModerateWork = factor(ModerateWork, levels = c(1,2), labels = c('Yes', 'No')),
+     VigorousRecreational = factor(VigorousRecreational, levels = c(1,2), labels = c('Yes', 'No')),
+     ModerateRecreational = factor(ModerateRecreational, levels = c(1,2), labels = c('Yes', 'No')),
+     SmokingCig = factor(SmokingCig, levels = c(1,2), labels = c('Yes', 'No')),
+    ) 
+adj_dataf$AccessPlace <- cut(adj_dataf$AccessPlace, c(0,1,2,3,4,Inf),labels=c("Clinic", "HMO", "Hosp. emerg. rm", "Hosp. outpatient dept.", "Other place"), include.lowest = TRUE)
+
+ # Selecting all the desirable variables   
+adj_dataf <- adj_dataf %>%
+  select(SEQN, DiagArthritis, RA, Age, Gender, Edu, Ethnic, MaritalStatus, IncomeRatio, SleepHours, SmokingCig, Systolic, Diastolic, BMI, Albumin_u, Glychemoglobin, TotalCholesterol, HDL, CholesterolRatio, Stress, HealthCondition, HealthCompared, AccessPlace, SeenMentalDoc, VigorousWork, ModerateWork, VigorousRecreational, ModerateRecreational, WTINT2YR, WTMEC2YR, SDMVPSU, SDMVSTRA)
+```
+7.0 Mix Data-Frame Selection: qualititative + quantitative data 
+
+```{r}
+write.csv(adj_dataf, file = ("NHANES_2011-2016_adj.csv"))   # 8,332 individuals
+```
+8.0 Exploratory Visualization: Boxplots - Factors vs IPR/ RA  (performed for al predictor variables)
+
+```{r}
+n_fun <- function(x){return(data.frame(y = 0.95*5.5,label = length(x)))}
+
+income_ethnic_plot <- ggplot(data = adj_dataf, aes(x=Ethnic, y=IncomeRatio, fill=RA)) + stat_boxplot(geom ='errorbar', width = 0.45) + geom_boxplot(width = 0.35, position = position_dodge(0.45)) + stat_summary(fun.data = n_fun, geom = "text", aes(group=RA), size= 9, hjust = 0.5, position = position_dodge(0.8)) + expand_limits(y = 0) + scale_y_continuous(sec.axis = dup_axis(label = NULL,name = NULL), expand = expansion(mult = c(0, 0)), breaks = pretty(c(0,5.5), n = 5), limits = c(0,5.5)) + xlab("Ethnicity") + ylab("IPR") + theme_bw()+ theme(axis.title.y = element_text(size=36, angle = 90, margin = margin(t=0,r=8,b=0,l=0)), axis.title.x = element_text(size=36, angle = 0,  margin=margin(t=4,r=0,b=0,l=0)), axis.text.y = element_text(size=33, angle = 0,  margin=margin(t=0,r=5,b=0,l=0)), axis.text.x = element_text(size=33, angle = 17,  margin=margin(t=38,r=20,b=0,l=30)))
+   
+income_ethnic_plot
+```
+9.0 ANOVA/ Post-hoc Analysis 
+(tested for all predictor variables, where all were found to be significant and only "Ethnic" had a significant interaction term)
+
+```{r}
+# 2-way ANOVA Table of Response Variable: IncomeRatio
+Ethnic_RA_IncomeRatio.aov <- aov(IncomeRatio ~ Ethnic * RA, data = adj_dataf) 
+summary(Ethnic_RA_IncomeRatio.aov) 
+
+# Tukey Multiple Comparison Test of Response Variable: IncomeRatio
+Ethnic_RA_IncomeRatio.tuk <- TukeyHSD(Ethnic_RA_IncomeRatio.aov,"Ethnic")
+Ethnic_RA_IncomeRatio.tuk 
+```
+10.0 Multiple Linear Regression Model 
+```{r}
+MODEL_mlr <- glm(IncomeRatio ~ RA + Age + Gender + Ethnic + Edu + SleepHours + MaritalStatus + HealthCompared + HealthCondition + AccessPlace + SeenMentalDoc + VigorousWork + ModerateWork + VigorousRecreational + ModerateRecreational + Stress + SmokingCig + Age*RA + Gender*RA + Ethnic*RA + Edu*RA + dataf$SleepHours*RA + MaritalStatus*RA + AccessPlace*RA + HealthCompared*RA + HealthCondition*RA  + SeenMentalDoc*RA + VigorousWork*RA + ModerateWork*RA + VigorousRecreational*RA + ModerateRecreational*RA + Stress*RA + SmokingCig*RA, family="gaussian", data=adj_dataf)
+
+summary(MODEL_mlr)  #AIC: 28476
+
+rsq(MODEL_mlr,adj=FALSE,type=c('v','kl','sse','lr','n'),data=adj_dataf) # 0.3683779
+```
+11.0 Stepwise Regression Model
+
+```{r}
+MODEL_step <- step(glm(IncomeRatio ~ RA + Age + Gender + Ethnic + Edu + bin_dataf$SleepHours_bin + MaritalStatus + HealthCompared + HealthCondition + AccessPlace + SeenMentalDoc + VigorousWork + ModerateWork + VigorousRecreational + ModerateRecreational + Stress + SmokingCig + Age*RA + Gender*RA + Ethnic*RA + Edu*RA+ bin_dataf$SleepHours_bin*RA + MaritalStatus*RA + HealthCompared*RA  + HealthCondition*RA + SeenMentalDoc*RA + VigorousWork*RA + ModerateWork*RA + VigorousRecreational*RA + ModerateRecreational*RA + Stress*RA + SmokingCig*RA, data=adj_dataf), direction="both") 
+
+MODEL_step_eq <- glm(IncomeRatio ~ RA + Age + Gender + Ethnic + Edu + bin_dataf$SleepHours_bin + MaritalStatus + HealthCondition + AccessPlace + VigorousWork + VigorousRecreational + ModerateRecreational + Stress + SmokingCig + RA*VigorousRecreational + RA*Stress, data = adj_dataf)
+
+summary(MODEL_step_eq) #AIC: 28437
+
+rsq(MODEL_step_eq,adj=FALSE,type=c('v','kl','sse','lr','n'),data=adj_dataf) # 0.3652729
+```
+12.0 Vertfiy linear regression modeling assumptions
+```{r}
+# Regression Diagnostic Analysis: Tests for Linearity, Nomality, Homoscedasticy, & Outliers 
+png(filename = "mlr_residual-dianostic.png")
+par(mfrow=c(2,2)) # Change the panel layout to 2 x 2
+plot(MODEL_mlr)
+dev.off()
+
+png(filename = "step-eq_residual-dianostic.png")
+par(mfrow=c(2,2)) # Change the panel layout to 2 x 2
+plot(MODEL_step_eq)
+dev.off()
+
+# Test for Mulitcollinearity 
+vif(MODEL_mlr)
+vif(MODEL_step_eq)
+```
